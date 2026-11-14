@@ -1,0 +1,38 @@
+# Development Docker Compose configuration with Neon Local
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: acquisitions-app-dev
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env.development
+    volumes:
+      - ./src:/app/src
+      - ./package.json:/app/package.json
+      - /app/node_modules
+    depends_on:
+      neon-local:
+        condition: service_started
+    networks:
+      - acquisitions-network
+
+  neon-local:
+    image: neondatabase/neon_local:latest
+    container_name: acquisitions-neon-local
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    # Loads NEON_API_KEY, NEON_PROJECT_ID, PARENT_BRANCH_ID from .env.development
+    env_file:
+      - .env.development
+    networks:
+      - acquisitions-network
+
+networks:
+  acquisitions-network:
+    driver: bridge

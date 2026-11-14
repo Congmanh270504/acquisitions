@@ -2,12 +2,32 @@
   "name": "acquisitions",
   "version": "1.0.0",
   "main": "index.ts",
+  "imports": {
+    "#src/*": "./src/*",
+    "#config/*": "./src/config/*",
+    "#controllers/*.js": "./src/controller/*.ts",
+    "#controllers/*": "./src/controller/*",
+    "#middleware/*.js": "./src/middleware/*.ts",
+    "#middleware/*": "./src/middleware/*",
+    "#models/*": "./src/models/*",
+    "#routes/*.js": "./src/routes/*.ts",
+    "#routes/*": "./src/routes/*",
+    "#services/*.js": "./src/services/*.ts",
+    "#services/*": "./src/services/*",
+    "#utils/*.js": "./src/utils/*.ts",
+    "#utils/*": "./src/utils/*",
+    "#validations/*": "./src/validation/*",
+    "#validation/*": "./src/validation/*"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "type": "module",
   "keywords": [],
@@ -16,17 +36,34 @@
   "description": "",
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
     "dotenv": "^18.0.10",
     "drizzle-orm": "^0.45.4",
-    "express": "^5.3.0"
+    "express": "^5.3.0",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.12.1",
+    "tsx": "^4.23.15",
+    "winston": "^3.19.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/bcrypt": "^6.0.0",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/morgan": "^1.9.10",
     "@types/node": "^26.6.6",
+    "@types/supertest": "^7.2.1",
+    "@vitest/coverage-v8": "4.1.12",
     "drizzle-kit": "^0.31.11",
     "eslint": "^10.14.0",
-    "tsx": "^4.23.15",
-    "typescript": "^7.0.2"
+    "supertest": "^7.3.2",
+    "typescript": "^7.0.2",
+    "vitest": "4.1.12"
   }
 }
