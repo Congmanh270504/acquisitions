@@ -1,5 +1,7 @@
 # Acquisitions Service - Dockerization & Neon Database Setup
 
+> 📖 **Production CI/CD & Cloud Deployment**: For a comprehensive, step-by-step guide on our CI/CD pipeline (GitHub Actions), Kubernetes (K3s) manifests, GCP VM setup, and automated SSL/HTTPS, refer to [**DEPLOYMENT_GUIDE.md**](./DEPLOYMENT_GUIDE.md).
+
 This project is fully dockerized with distinct workflows for **Development (Local with Neon Local)** and **Production (Direct Neon Cloud Serverless DB)**.
 
 ---
