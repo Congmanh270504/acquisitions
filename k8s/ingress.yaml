@@ -4,17 +4,9 @@ metadata:
   name: acquisitions-ingress
   labels:
     app: acquisitions
-  annotations:
-    kubernetes.io/ingress.class: nginx
-    nginx.ingress.kubernetes.io/proxy-body-size: "16m"
-    # Bật lại khi đã cài cert-manager trên cluster:
-    # cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
-  # Bật lại khi đã cấu hình SSL:
-  # tls:
-  #   - hosts:
-  #       - app.34.136.218.3.nip.io
-  #     secretName: acquisitions-tls-cert
+  # K3s mặc định cài sẵn Traefik Ingress Controller
+  ingressClassName: traefik
   rules:
     - host: app.34.136.218.3.nip.io
       http:

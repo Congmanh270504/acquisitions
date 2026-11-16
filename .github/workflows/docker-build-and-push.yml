@@ -102,15 +102,25 @@ jobs:
         if: steps.check_kube.outputs.has_kube == 'true'
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           IMAGE_TAG: sha-${{ github.sha }}
         run: |
           echo "🚀 Bắt đầu quá trình Deploy lên Kubernetes..."
 
-          # 1. Apply ConfigMap
+          # 1. Cấu hình Docker Hub Registry Secret (hỗ trợ kéo private repo)
+          if [ -n "$DOCKER_USERNAME" ] && [ -n "$DOCKER_PASSWORD" ]; then
+            kubectl create secret docker-registry dockerhub-secret \
+              --docker-server=https://index.docker.io/v1/ \
+              --docker-username="$DOCKER_USERNAME" \
+              --docker-password="$DOCKER_PASSWORD" \
+              --dry-run=client -o yaml | kubectl apply -f -
+          fi
+
+          # 2. Apply ConfigMap
           kubectl apply -f k8s/configmap.yaml
 
-          # 2. Tạo hoặc cập nhật Secret an toàn nếu có DATABASE_URL trong GitHub Secrets
+          # 3. Tạo hoặc cập nhật Secret an toàn nếu có DATABASE_URL trong GitHub Secrets
           if [ -n "$DATABASE_URL" ]; then
             kubectl create secret generic acquisitions-secret \
               --from-literal=DATABASE_URL="$DATABASE_URL" \
@@ -119,21 +129,36 @@ jobs:
             kubectl apply -f k8s/secret.yaml
           fi
 
-          # 3. Apply Service
+          # 4. Apply Service
           kubectl apply -f k8s/service.yaml
 
-          # 4. Apply Ingress (nếu có)
+          # 5. Apply Ingress
           if [ -f "k8s/ingress.yaml" ]; then
             kubectl apply -f k8s/ingress.yaml
           fi
 
-          # 5. Apply Deployment & Cập nhật Image tag vừa build
+          # 6. Thay thế image tag mới nhất và Apply Deployment
+          sed -i "s|cmanh2705/acquisitions:latest|$DOCKER_USERNAME/acquisitions:$IMAGE_TAG|g" k8s/deployment.yaml
           kubectl apply -f k8s/deployment.yaml
-          kubectl set image deployment/acquisitions-deployment acquisitions=$DOCKER_USERNAME/acquisitions:$IMAGE_TAG
 
-          # 6. Kiểm tra trạng thái rollout
+          # 7. Kiểm tra trạng thái rollout
           kubectl rollout status deployment/acquisitions-deployment --timeout=180s
 
           echo "## 🚀 Kubernetes Deploy Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Image Deployed:** \`$DOCKER_USERNAME/acquisitions:$IMAGE_TAG\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Status:** ✅ Successfully rolled out to cluster" >> $GITHUB_STEP_SUMMARY
+
+      - name: Debug Pod Failure
+        if: failure() && steps.check_kube.outputs.has_kube == 'true'
+        run: |
+          echo "=============================================="
+          echo "❌ ROLLOUT THẤT BẠI - BẮT ĐẦU CHẨN ĐOÁN LỖI"
+          echo "=============================================="
+          echo "1. Danh sách Pods và Trạng thái:"
+          kubectl get pods -l app=acquisitions -o wide
+          echo ""
+          echo "2. Chi tiết sự kiện (Events & Errors):"
+          kubectl describe pods -l app=acquisitions
+          echo ""
+          echo "3. Nhật ký Logs của Container:"
+          kubectl logs -l app=acquisitions --tail=100 --all-containers=true || true

@@ -19,9 +19,11 @@ spec:
       labels:
         app: acquisitions
     spec:
+      imagePullSecrets:
+        - name: dockerhub-secret
       containers:
         - name: acquisitions
-          image: acquisitions-app:latest
+          image: cmanh2705/acquisitions:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -41,15 +43,15 @@ spec:
             httpGet:
               path: /health
               port: 8080
-            initialDelaySeconds: 15
-            periodSeconds: 10
+            initialDelaySeconds: 20
+            periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /health
               port: 8080
-            initialDelaySeconds: 10
-            periodSeconds: 5
-            timeoutSeconds: 3
-            failureThreshold: 2
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3

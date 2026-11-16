@@ -20,6 +20,9 @@ RUN npm ci
 # Copy application source code
 COPY . .
 
+# Tạo thư mục logs và cấp toàn quyền cho user non-root node
+RUN mkdir -p /app/logs && chown -R node:node /app
+
 # Expose server port
 EXPOSE 8080
 
