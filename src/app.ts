@@ -8,6 +8,9 @@ import cookiePaster from "cookie-parser";
 import authRouter from "#routes/auth.route.ts";
 import usersRouter from "#routes/users.route.js";
 
+import { db } from "#config/database.ts";
+import { users } from "./db/schema";
+
 const app = express();
 
 app.use(helmet());
@@ -26,14 +29,22 @@ app.use(
     }),
 );
 
-app.get("/health", (req, res) => {
-    res.status(200).send({
-        status: "OK",
-        message: "Accquistions is healthy",
-        timestamp: new Date().toISOString(),
-        createAt: new Date().toISOString(),
-        uptime: process.uptime(),
-    });
+app.get("/health", async (req, res) => {
+    try {
+        // ping to db
+        await db.select().from(users).limit(1);
+
+        res.status(200).send({
+            status: "OK",
+            message: "Accquistions is healthy",
+            timestamp: new Date().toISOString(),
+            createAt: new Date().toISOString(),
+            uptime: process.uptime(),
+        });
+        
+    } catch (error) {
+        res.status(500).json({ status: "ERROR", message: "Database down" });
+    }
 });
 
 app.get("/api", (req, res) => {

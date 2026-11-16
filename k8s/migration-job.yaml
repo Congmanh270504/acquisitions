@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: acquisitions-db-migrate
+  labels:
+    app: acquisitions-migration
+spec:
+  # Tự động dọn dẹp job sau 300s kể từ khi hoàn tất
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: acquisitions-migration
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: db-migrate
+          image: acquisitions-app:latest
+          imagePullPolicy: Always
+          command: ["npm", "run", "db:migrate"]
+          envFrom:
+            - configMapRef:
+                name: acquisitions-config
+            - secretRef:
+                name: acquisitions-secret

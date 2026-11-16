@@ -35,6 +35,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=sha
+            type=raw,value=sha-${{ github.sha }}
             type=raw,value=latest
             type=raw,value=prod-{{date 'YYYYMMDD-HHmmss'}}
 
@@ -62,3 +63,77 @@ jobs:
           echo '```text' >> $GITHUB_STEP_SUMMARY
           echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+
+  deploy:
+    name: Deploy to Kubernetes
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'latest'
+
+      - name: Check Kubeconfig Secret
+        id: check_kube
+        run: |
+          if [ -n "${{ secrets.KUBE_CONFIG }}" ]; then
+            echo "has_kube=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_kube=false" >> $GITHUB_OUTPUT
+            echo "## ⚠️ Kubernetes Deploy Notice" >> $GITHUB_STEP_SUMMARY
+            echo "- Secret \`KUBE_CONFIG\` chưa được cài đặt trong GitHub Repository Secrets." >> $GITHUB_STEP_SUMMARY
+            echo "- Bỏ qua bước Deploy tự động. Pipeline Build & Push image vẫn thành công." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Set Kubernetes Context
+        if: steps.check_kube.outputs.has_kube == 'true'
+        uses: azure/k8s-set-context@v4
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+
+      - name: Deploy to K8s Cluster
+        if: steps.check_kube.outputs.has_kube == 'true'
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          IMAGE_TAG: sha-${{ github.sha }}
+        run: |
+          echo "🚀 Bắt đầu quá trình Deploy lên Kubernetes..."
+
+          # 1. Apply ConfigMap
+          kubectl apply -f k8s/configmap.yaml
+
+          # 2. Tạo hoặc cập nhật Secret an toàn nếu có DATABASE_URL trong GitHub Secrets
+          if [ -n "$DATABASE_URL" ]; then
+            kubectl create secret generic acquisitions-secret \
+              --from-literal=DATABASE_URL="$DATABASE_URL" \
+              --dry-run=client -o yaml | kubectl apply -f -
+          elif [ -f "k8s/secret.yaml" ]; then
+            kubectl apply -f k8s/secret.yaml
+          fi
+
+          # 3. Apply Service
+          kubectl apply -f k8s/service.yaml
+
+          # 4. Apply Ingress (nếu có)
+          if [ -f "k8s/ingress.yaml" ]; then
+            kubectl apply -f k8s/ingress.yaml
+          fi
+
+          # 5. Apply Deployment & Cập nhật Image tag vừa build
+          kubectl apply -f k8s/deployment.yaml
+          kubectl set image deployment/acquisitions-deployment acquisitions=$DOCKER_USERNAME/acquisitions:$IMAGE_TAG
+
+          # 6. Kiểm tra trạng thái rollout
+          kubectl rollout status deployment/acquisitions-deployment --timeout=180s
+
+          echo "## 🚀 Kubernetes Deploy Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Deployed:** \`$DOCKER_USERNAME/acquisitions:$IMAGE_TAG\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ✅ Successfully rolled out to cluster" >> $GITHUB_STEP_SUMMARY
