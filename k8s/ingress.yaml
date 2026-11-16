@@ -4,9 +4,16 @@ metadata:
   name: acquisitions-ingress
   labels:
     app: acquisitions
+  annotations:
+    # Yêu cầu cert-manager tự động cấp SSL miễn phí từ Let's Encrypt
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
-  # K3s mặc định cài sẵn Traefik Ingress Controller
+  # K3s mặc định dùng Traefik Ingress Controller
   ingressClassName: traefik
+  tls:
+    - hosts:
+        - app.34.136.218.3.nip.io
+      secretName: acquisitions-tls-cert
   rules:
     - host: app.34.136.218.3.nip.io
       http:

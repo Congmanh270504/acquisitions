@@ -104,9 +104,16 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
           IMAGE_TAG: sha-${{ github.sha }}
         run: |
           echo "🚀 Bắt đầu quá trình Deploy lên Kubernetes..."
+
+          # 0. Cấu hình và Apply ClusterIssuer (nếu có LETSENCRYPT_EMAIL trong GitHub Secrets)
+          if [ -n "$LETSENCRYPT_EMAIL" ] && [ -f "k8s/cluster-issuer.yaml" ]; then
+            sed -i "s|\${LETSENCRYPT_EMAIL}|$LETSENCRYPT_EMAIL|g" k8s/cluster-issuer.yaml
+            kubectl apply -f k8s/cluster-issuer.yaml
+          fi
 
           # 1. Cấu hình Docker Hub Registry Secret (hỗ trợ kéo private repo)
           if [ -n "$DOCKER_USERNAME" ] && [ -n "$DOCKER_PASSWORD" ]; then
